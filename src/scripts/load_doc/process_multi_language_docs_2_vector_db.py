@@ -246,6 +246,18 @@ def insert_data(client: MilvusClient, collection_name: str, df: pd.DataFrame):
         if i % 100 == 0:
             print(f"Progress: {i}/{total}")
 
+        # Convert string embedding to list of floats
+        embedding_str = row.embedding
+        if isinstance(embedding_str, str):
+            try:
+                # Remove any whitespace and convert to list of floats
+                embedding = [float(x.strip()) for x in embedding_str.strip("[]").split(",")]
+            except Exception as e:
+                print(f"Error converting embedding for row {i}: {e}")
+                continue
+        else:
+            embedding = embedding_str
+
         data_item = {
             "python": row.python_content if pd.notna(row.python_content) else "",
             "node": row.node_content if pd.notna(row.node_content) else "",
@@ -254,7 +266,7 @@ def insert_data(client: MilvusClient, collection_name: str, df: pd.DataFrame):
             "csharp": row.csharp_content if pd.notna(row.csharp_content) else "",
             "restful": row.restful_content if pd.notna(row.restful_content) else "",
             "file_name": row.python_path.split("/")[-1] if pd.notna(row.python_path) else "",
-            "dense": row.embedding,
+            "dense": embedding,
         }
         data_to_insert.append(data_item)
 

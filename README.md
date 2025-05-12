@@ -31,7 +31,7 @@ uv run src/mcp_pymilvus_code_generate_helper/sse_server.py
 3. Fill out the form:
    - **Name**: `pymilvus-code-generate-helper` (or any name you prefer)
    - **Type**: Select `sse`
-   - **Server URL**: `http://localhost:23333/sse` (replace with your server's IP address)
+   - **Server URL**: `http://localhost:23333/milvus-code-helper/sse` (replace with your server's IP address)
 4. Click `Save`
 
 You can also directly edit `mcp.json` as below:
@@ -39,7 +39,7 @@ You can also directly edit `mcp.json` as below:
 {
   "mcpServers": {
     "pymilvus-code-generate-helper": {
-      "url": "http://localhost:23333/sse"
+      "url": "http://localhost:23333/milvus-code-helper/sse"
     }
   }
 }
@@ -115,6 +115,84 @@ You can also directly edit `mcp.json` as below:
 4. Restart Claude Desktop
 > ⚠️ Note: Remember to set the OPENAI_API_KEY environment variable
 
+## User Rule
+Here’s an additional instruction you can add for users to improve tool invocation accuracy in Cursor:
+To ensure more accurate tool invocation when using Cursor, you can set a User Rule as follows:
+
+Go to `Cursor` > `Preferences` > `Cursor Settings` > `Rules`, and add the following to your User Rule. Here is an example user rule that has proven effective for your reference:
+
+````
+Always use tools in milvus code generation, convertion and translation tasks.
+1.milvus code generation.
+- Can you help me generate a sample pymilvus code to hybrid search？
+Call milvus_pypmilvus_code_generate_helper
+
+2.milvus client and orm code convertion.
+- Can you help me translate the following orm code to create collection to pymilvus client?
+- <code context> translate to orm
+Call milvus_orm_client_code_convert_helper
+
+3.milvus code translation between different programming language.
+- Can you help me translate the following milvus code to java.
+- <code context> translate to nodejs
+Call milvus_code_translate_helper
+
+If you meet the milvus code translation between different programming language task or convert between orm and milvus client, you must identify all API calls of the selected codes related to the Milvus SDK. The "query" argument should be a list of API call descriptions.
+
+Here is the examples:
+Example 1
+Context:
+```
+from pymilvus import MilvusClient, DataType
+
+CLUSTER_ENDPOINT = "http://localhost:19530"
+TOKEN = "root:Milvus"
+
+# 1. Set up a Milvus client
+client = MilvusClient(
+    uri=CLUSTER_ENDPOINT,
+    token=TOKEN 
+)
+
+# 2. Create a collection in quick setup mode
+client.create_collection(
+    collection_name="quick_setup",
+    dimension=5
+)
+
+res = client.get_load_state(
+    collection_name="quick_setup"
+)
+
+print(res)
+```
+Parsed arguments of tool using:
+["create_collection", "get_load_state"]
+
+Example 2
+Context:
+```
+from pymilvus import MilvusClient
+
+client = MilvusClient(uri="http://localhost:19530", token="root:Milvus")
+
+if not client.has_collection("my_collection"):
+    client.create_collection(collection_name="my_collection", dimension=128)
+
+client.insert(
+    collection_name="my_collection",
+    data=[{"vector": [0.1, 0.2, 0.3, 0.4, 0.5]}]
+)
+
+client.flush(["my_collection"])
+```
+Parsed arguments of tool using:
+["has_collection", "create_collection", "insert", "flush"]
+````
+
+Feel free to adjust or add more rules as needed for your workflow.
+
+
 ## Available Tools
 
 The server provides the following tools:
@@ -123,10 +201,32 @@ The server provides the following tools:
   - Parameters:
     - `query`: User query for generating code
 
-- `milvus-translate-orm-to-milvus-client-code-helper`: Find related orm and pymilvus client code/documents to help translating orm code to milvus client from user input in natural language
+- `milvus-orm-client-code-convert-helper`: Find related orm and pymilvus client code/documents to help converting orm code to pymilvus client (or vice versa)
   - Parameters:
-    - `query`: User query for translating orm code to milvus client code
+    - `query`: A string of Milvus API names in list format from user query and code context to translate between orm and milvus client
 
+- `milvus-code-translate-helper`: Find related documents and code snippets in different programming languages for milvus code translation
+- Parameters:
+    - `query`: A string of Milvus API names in list format to translate from one programming language to another (e.g., ['create_collection', 'insert', 'search'])
+    - `source_language`: Source programming language (e.g., 'python', 'java', 'go', 'csharp', 'node', 'restful')
+    - `target_language`: Target programming language (e.g., 'python', 'java', 'go', 'csharp', 'node', 'restful')
+
+> ⚠️ Note: You don't need to specify the tool name or parameters in the query. Just interact as you normally would when coding with LLM: state your requirements and select the relevant code context. MCP will automatically select the appropriate tool based on the query content and prepare corresponding parameters.
+
+## Docker
+You can also build and run milvus code helper MCP server with Docker
+
+### Build the Docker Image
+
+```bash
+docker build -t milvus-code-helper .
+```
+
+### Run the Docker Container
+
+```bash
+docker run -p <YOUR_HOST_IP>:<YOUR_HOST_PORT>:23333 -e OPENAI_API_KEY -e MILVUS_URI=<YOUR_MILVUS_URI> -e MILVUS_TOKEN=<YOUR_MILVUS_TOKEN> milvus-code-helper
+```
 
 ## Contribution
 Contributions are welcome! If you have ideas for improving the retrieve result, please submit a pull request or open an issue.

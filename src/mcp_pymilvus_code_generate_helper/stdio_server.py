@@ -15,7 +15,10 @@ logger = logging.getLogger("stdio-mcp-pymilvus-code-generate-server")
 def main():
     parser = argparse.ArgumentParser(description="PyMilvus Code Generation Helper")
     parser.add_argument(
-        "--milvus_uri", type=str, default="http://localhost:19530", help="Milvus server URI"
+        "--milvus_uri",
+        type=str,
+        default="http://localhost:19530",
+        help="Milvus server URI",
     )
     parser.add_argument("--milvus_token", type=str, default="", help="Milvus server token")
     parser.add_argument("--db_name", type=str, default="default", help="Milvus database name")
@@ -46,14 +49,14 @@ def main():
                 },
             ),
             Tool(
-                name="milvus-translate-orm-to-milvus-client-code-helper",
-                description="Find related orm and pymilvus client code/documents to help translating orm code to milvus client from user input in natural language",
+                name="milvus-orm-client-code-convert-helper",
+                description="Find related orm and pymilvus client code/documents to help converting orm code to pymilvus client (or vice versa)",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "User query for translating orm code to milvus client",
+                            "description": "A string of Milvus API names in list format from user query and code context to translate between orm and milvus client",
                         }
                     },
                     "required": ["query"],
@@ -69,16 +72,16 @@ def main():
                             "type": "string",
                             "description": "A string of Milvus API names in list format to translate from one programming language to another (e.g., ['create_collection', 'insert', 'search'])",
                         },
-                        "source_lang": {
+                        "source_language": {
                             "type": "string",
                             "description": "Source programming language (e.g., 'python', 'java', 'go', 'csharp', 'node', 'restful')",
                         },
-                        "target_lang": {
+                        "target_language": {
                             "type": "string",
                             "description": "Target programming language (e.g., 'python', 'java', 'go', 'csharp', 'node', 'restful')",
                         },
                     },
-                    "required": ["query", "source_lang", "target_lang"],
+                    "required": ["query", "source_language", "target_language"],
                 },
             ),
         ]
@@ -92,16 +95,16 @@ def main():
             query = arguments["query"]
             code = await pymilvus_server.pypmilvus_code_generate_helper(query)
             return [TextContent(type="text", text=code)]
-        elif name == "milvus-translate-orm-to-milvus-client-code-helper":
+        elif name == "milvus-orm-client-code-convert-helper":
             query = arguments["query"]
-            code = await pymilvus_server.orm_to_milvus_client_code_translate_helper(query)
+            code = await pymilvus_server.orm_client_code_convert_helper(query)
             return [TextContent(type="text", text=code)]
         elif name == "milvus-code-translate-helper":
             query = arguments["query"]
-            source_lang = arguments["source_lang"]
-            target_lang = arguments["target_lang"]
+            source_language = arguments["source_language"]
+            target_language = arguments["target_language"]
             code = await pymilvus_server.milvus_code_translate_helper(
-                query, source_lang, target_lang
+                query, source_language, target_language
             )
             return [TextContent(type="text", text=code)]
 

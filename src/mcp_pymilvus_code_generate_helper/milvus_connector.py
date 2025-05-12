@@ -25,7 +25,7 @@ class MilvusConnector:
             self.milvus_client.load_collection("pymilvus_user_guide")
             self.milvus_client.load_collection("mcp_orm")
             self.milvus_client.load_collection("mcp_milvus_client")
-            self.milvus_client.load_collection("mcp_multi_lang_docs")
+            self.milvus_client.load_collection("mcp_multi_language_docs")
         except Exception as e:
             logger.error(f"Fail to load collection: {e}")
 
@@ -104,19 +104,20 @@ class MilvusConnector:
         related_documents = "Here are related pymilvus code/documents found to help you generate code from user query:\n\n"
         for i, hit in enumerate(results[0]):
             content = hit["entity"]["content"]
-            related_documents += f"{i + 1}:\n{content}\n\n"
+            metadata = hit["entity"].get("metadata", "")
+            related_documents += f"{i + 1} (File: {metadata}):\n{content}\n\n"
 
         return related_documents
 
-    async def orm_to_milvus_client_code_translate_helper(self, query) -> str:
+    async def orm_client_code_convert_helper(self, query) -> str:
         """
         Retrieve related orm and pymilvus client code/documents for a given query.
 
         Args:
-            query: User query for translating orm code to milvus client in natural language
+            query: A string of Milvus API names in list format from user query and code context to translate between orm and milvus client
 
         Returns:
-            str: Related orm and pymilvus client code/documents for a user query
+            str: Related orm and pymilvus client code/documents
         """
 
         orm_results = self.search_similar_documents("mcp_orm", query)
@@ -136,12 +137,14 @@ class MilvusConnector:
         related_documents += "Related ORM documents:\n\n"
         for i, hit in enumerate(orm_results[0]):
             content = hit["entity"]["content"]
-            related_documents += f"{i + 1}:\n{content}\n\n"
+            metadata = hit["entity"].get("metadata", "")
+            related_documents += f"{i + 1} (File: {metadata}):\n{content}\n\n"
 
         related_documents += "Related Milvus Client documents:\n\n"
         for i, hit in enumerate(milvus_client_results[0]):
             content = hit["entity"]["content"]
-            related_documents += f"{i + 1}:\n{content}\n\n"
+            metadata = hit["entity"].get("metadata", "")
+            related_documents += f"{i + 1} (File: {metadata}):\n{content}\n\n"
 
         return related_documents
 
@@ -179,7 +182,7 @@ class MilvusConnector:
         for api in api_list:
             results.append(
                 self.search_similar_documents(
-                    "mcp_multi_lang_docs",
+                    "mcp_multi_language_docs",
                     api,
                     top_k=1,
                     output_fields=["file_name", source_lang, target_lang],
@@ -188,7 +191,7 @@ class MilvusConnector:
 
         results.append(
             self.search_similar_documents(
-                "mcp_multi_lang_docs",
+                "mcp_multi_language_docs",
                 query,
                 top_k=5,
                 output_fields=["file_name", source_lang, target_lang],
